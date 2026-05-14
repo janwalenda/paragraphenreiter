@@ -69,7 +69,8 @@ function FilterRadio({ className, reset, chipLabel, ...props }: FilterRadioProps
       <label
         data-slot="filter-radio-label"
         className={cn(
-          "btn btn-sm shrink-0 cursor-pointer has-[:checked]:btn-primary",
+          // Cap chip width on mobile (long RSS titles); min-w-0 so truncate works inside .btn
+          "btn btn-sm min-w-0 max-w-[min(100%,14rem)] shrink cursor-pointer has-[:checked]:btn-primary",
           reset && "filter-reset",
           className,
         )}
@@ -80,7 +81,7 @@ function FilterRadio({ className, reset, chipLabel, ...props }: FilterRadioProps
           className="sr-only"
           {...props}
         />
-        <span className="max-w-[min(100%,14rem)] truncate">{chipLabel}</span>
+        <span className="block min-w-0 truncate">{chipLabel}</span>
       </label>
     );
   }

@@ -177,7 +177,6 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
                 title={kw}
                 checked={keyword === kw}
                 onChange={() => setKeyword(kw)}
-                className="max-w-[min(100%,14rem)]"
               />
             ))}
           </Filter>
