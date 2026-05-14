@@ -44,6 +44,10 @@ const FEED_LANG_FILTER_META: Record<
     label: "French",
     title: "French keyword list (e.g. CIJ, CPI)",
   },
+  it: {
+    label: "Italian",
+    title: "Italian keyword list (e.g. CIJ, CPI, OIL)",
+  },
 };
 
 /**
@@ -182,9 +186,10 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
           </legend>
           <p className="text-xs text-base-content/60">
             From the channel RSS <code className="text-[0.7rem]">language</code>{" "}
-            field: primary tag <code className="text-[0.7rem]">de</code> uses the
-            German list, <code className="text-[0.7rem]">fr</code> the French list;
-            otherwise the English list (e.g. ICJ / ICC).
+            field: primary tags <code className="text-[0.7rem]">de</code>,{" "}
+            <code className="text-[0.7rem]">fr</code>, and{" "}
+            <code className="text-[0.7rem]">it</code> use the German, French, or
+            Italian lists; otherwise the English list (e.g. ICJ / ICC).
           </p>
           <Filter>
             <FilterRadio
@@ -306,7 +311,7 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
                     style="outline"
                     size="xs"
                     className="font-mono uppercase"
-                    title="Keyword list from RSS channel language (de vs. default en)"
+                    title="Keyword list from RSS channel language (de / fr / it vs. default en)"
                   >
                     {item.sourceLang}
                   </Badge>
