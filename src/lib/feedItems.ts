@@ -8,10 +8,10 @@ import {
 
 /**
  * Maps the RSS channel `<language>` tag (BCP 47 / RFC 3066) to a keyword list language.
- * Primary subtags `de` and `fr` use dedicated lists; everything else uses English.
+ * Primary subtags `de`, `fr`, and `it` use dedicated lists; everything else uses English.
  *
  * @param language - Raw `language` value from the feed, if present.
- * @returns `"de"`, `"fr"`, or `"en"` for keyword matching.
+ * @returns `"de"`, `"fr"`, `"it"`, or `"en"` for keyword matching.
  */
 function keywordLangFromRssLanguage(
   language: string | undefined,
@@ -20,6 +20,7 @@ function keywordLangFromRssLanguage(
   const primary = language.trim().split(/[-_]/)[0]?.toLowerCase();
   if (primary === "de") return "de";
   if (primary === "fr") return "fr";
+  if (primary === "it") return "it";
   return "en";
 }
 
@@ -50,21 +51,30 @@ const parser = new RSSParser({
   },
 });
 
-/** BCP 47 locale string used for case folding when matching keywords. */
-function normalizeLocale(lang: FeedFilterLang): string {
-  if (lang === "de") return "de";
-  if (lang === "fr") return "fr";
-  return "en";
+/** Regex metacharacters in keyword strings (after whitespace split). */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 /**
- * Lowercases text for keyword search using the appropriate locale.
+ * True if `keyword` occurs in `text` as a whole word or phrase, not as a substring inside
+ * a longer token (e.g. "IGH" must not match "highlights"; "ILO" must not match "philosophie").
  *
- * @param s - Haystack or keyword text.
- * @param lang - Feed language bucket (`de` / `en` / `fr`).
+ * Uses Unicode letter/number boundaries so German/French text matches correctly with the `u` flag.
+ *
+ * @param text - Haystack (typically RSS title + body fields).
+ * @param keyword - Configured phrase; internal runs of whitespace match any `\s+` in the feed.
  */
-function normalizeForMatch(s: string, lang: FeedFilterLang): string {
-  return s.toLocaleLowerCase(normalizeLocale(lang));
+function textMatchesKeyword(text: string, keyword: string): boolean {
+  const parts = keyword.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return false;
+  const inner = parts.map(escapeRegExp).join("\\s+");
+  const pattern = `(?<![\\p{L}\\p{N}_])${inner}(?![\\p{L}\\p{N}_])`;
+  try {
+    return new RegExp(pattern, "iu").test(text);
+  } catch {
+    return text.toLowerCase().includes(keyword.toLowerCase());
+  }
 }
 
 /** Returns the keyword list for the given feed language. */
@@ -73,16 +83,15 @@ function keywordsFor(lang: FeedFilterLang): readonly string[] {
 }
 
 /**
- * Collects configured keywords that appear in `text` (case-insensitive, locale-aware).
+ * Collects configured keywords that appear in `text` (case-insensitive, word/phrase boundaries).
  *
  * @param text - Combined title/body fields from the RSS item.
  * @param lang - Which keyword list to use.
  */
 function getMatchedKeywords(text: string, lang: FeedFilterLang): string[] {
-  const haystack = normalizeForMatch(text, lang);
   const hits: string[] = [];
   for (const kw of keywordsFor(lang)) {
-    if (haystack.includes(normalizeForMatch(kw, lang))) hits.push(kw);
+    if (textMatchesKeyword(text, kw)) hits.push(kw);
   }
   return hits;
 }
