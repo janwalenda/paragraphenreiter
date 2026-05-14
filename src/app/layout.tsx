@@ -4,9 +4,10 @@ import "./globals.css";
 import { Navbar, NavbarCenter, NavbarEnd, NavbarStart } from "@/components/ui/navbar";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Rss } from "lucide-react";
+import { GitBranch, Rss } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ThemeController from "@/components/ThemeController";
+import { version } from "../../package.json"
 
 const merriweather = Merriweather({
   variable: "--font-merriweather",
@@ -45,6 +46,11 @@ export default function RootLayout({
             </NavbarStart>
             <NavbarCenter />
             <NavbarEnd>
+              <Button buttonStyle="ghost" modifier="circle" asChild>
+                <Link title={`v${version}`} href="https://github.com/janwalenda/paragraphenreiter/releases">
+                  <GitBranch className="size-4" />
+                </Link>
+              </Button>
               <ThemeController />
               <Button buttonStyle="ghost" modifier="circle" asChild>
                 <Link href="/feed.rss">
