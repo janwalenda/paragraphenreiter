@@ -11,6 +11,7 @@ import {
   type FeedFilterLang,
 } from "@/constants/feedFilterKeywords";
 import type { FeedArticle } from "@/lib/feedItems";
+import { htmlToPlainTextSnippet } from "@/lib/feedHtmlPlain";
 
 /** Host part of a URL for compact UI labels (drops leading `www.`). */
 function hostnameOf(url: string): string {
@@ -226,7 +227,6 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
           return (
             <Card
               key={item.id}
-              suppressHydrationWarning
               className={
                 "card-enter group relative overflow-hidden border border-base-content/10 " +
                 "bg-base-200/70 shadow-lg backdrop-blur-sm transition-all duration-300 " +
@@ -339,16 +339,13 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
                     </Badge>
                   ) : null}
                 </div>
-                <div
-                  suppressHydrationWarning
+                <p
                   className={
-                    "line-clamp-4 text-sm text-base-content/75 max-w-none " +
-                    "[&_a]:text-primary [&_a]:underline [&_p]:mb-2 [&_p:last-child]:mb-0"
+                    "line-clamp-4 text-sm text-base-content/75 max-w-none break-words"
                   }
-                  dangerouslySetInnerHTML={{
-                    __html: item.description,
-                  }}
-                />
+                >
+                  {htmlToPlainTextSnippet(item.description)}
+                </p>
                 <div className="mt-1 flex justify-end border-t border-base-content/5 pt-2">
                   <Link
                     href={item.link}

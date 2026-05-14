@@ -3,10 +3,10 @@ import { Merriweather } from "next/font/google";
 import "./globals.css";
 import { Navbar, NavbarCenter, NavbarEnd, NavbarStart } from "@/components/ui/navbar";
 import Link from "next/link";
-import { H1 } from "@/components/ui/heading";
 import { cn } from "@/lib/utils";
 import { Rss } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ThemeController from "@/components/ThemeController";
 
 const merriweather = Merriweather({
   variable: "--font-merriweather",
@@ -37,15 +37,15 @@ export default function RootLayout({
         <header className="sticky top-0 z-50 w-full border-b border-base-content/5 bg-base-300/85 px-4 shadow-sm backdrop-blur-md backdrop-saturate-150">
           <Navbar className="container mx-auto">
             <NavbarStart asChild>
-
-              <H1>
+              <b>
                 <Link href="/" className="text-base-content">
                   Paragraphenreiter
                 </Link>
-              </H1>
+              </b>
             </NavbarStart>
             <NavbarCenter />
             <NavbarEnd>
+              <ThemeController />
               <Button buttonStyle="ghost" modifier="circle" asChild>
                 <Link href="/feed.rss">
                   <Rss className="size-4" />
