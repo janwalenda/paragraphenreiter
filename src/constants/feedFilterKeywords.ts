@@ -1,17 +1,24 @@
 /**
- * Curation keywords for Paragraphenreiter, **per feed language** (`de` / `en` / `fr`).
+ * Curation keywords for Paragraphenreiter, **per feed language** (`de` / `en` / `fr` / `it`).
  *
  * - German list: IGH / IStGH, ILO / labour, EU law (German labels).
  * - English list: ICJ / ICC, IHL, UNCLOS, ILO, EU law (English), plus a few French labels
  *   for mixed-language international copy.
  * - French list: CPI / CIJ, droit international, OIT, droit de l’UE (French labels).
+ * - Italian list: Corte internazionale di giustizia, CPI, OIL, diritto dell’UE (Italian labels).
  *
- * Matching is case-insensitive (see `src/lib/feedItems.ts`).
+ * Matching is case-insensitive with Unicode word/phrase boundaries (see `src/lib/feedItems.ts`)
+ * so short tokens like `IGH` do not match inside unrelated words (e.g. “Highlights”).
  */
-export type FeedFilterLang = "de" | "en" | "fr";
+export type FeedFilterLang = "de" | "en" | "fr" | "it";
 
 /** Display / filter order for language buckets in the UI. */
-export const FEED_FILTER_LANG_ORDER = ["de", "en", "fr"] as const satisfies readonly FeedFilterLang[];
+export const FEED_FILTER_LANG_ORDER = [
+  "de",
+  "en",
+  "fr",
+  "it",
+] as const satisfies readonly FeedFilterLang[];
 
 const KEYWORDS_DE = [
   "Völkerrecht",
@@ -134,6 +141,54 @@ const KEYWORDS_FR = [
   "tripartisme",
 ] as const;
 
+const KEYWORDS_IT = [
+  "diritto internazionale",
+  "diritto internazionale pubblico",
+  "diritto internazionale consuetudinario",
+  "Corte internazionale di giustizia",
+  "CIJ",
+  "Corte mondiale",
+  "Corte penale internazionale",
+  "CPI",
+  "diritto internazionale umanitario",
+  "DIU",
+  "diritto umanitario",
+  "diritto dei conflitti armati",
+  "leggi di guerra",
+  "Convenzioni di Ginevra",
+  "Convenzione di Ginevra",
+  "Carta delle Nazioni Unite",
+  "Carta dell'Organizzazione delle Nazioni Unite",
+  "immunità degli Stati",
+  "immunità statale",
+  "immunità sovrana",
+  "immunità diplomatica",
+  "diritto del mare",
+  "Convenzione delle Nazioni Unite sul diritto del mare",
+  "CNUDM",
+  "Tribunale internazionale del diritto del mare",
+  "delimitazione marittima",
+  "diritto dell'Unione europea",
+  "diritto dell'UE",
+  "legislazione dell'Unione europea",
+  "giurisprudenza dell'Unione europea",
+  "Corte di giustizia dell'Unione europea",
+  "CGUE",
+  "CJUE",
+  "Corte di giustizia delle Comunità europee",
+  "Organizzazione internazionale del Lavoro",
+  "OIL",
+  "Convenzione dell'OIL",
+  "Convenzioni dell'OIL",
+  "norme fondamentali del lavoro",
+  "lavoro dignitoso",
+  "tripartismo",
+  "ICJ",
+  "ICC",
+  "ILO",
+  "ITLOS",
+] as const;
+
 /** Keyword phrases grouped by feed language for server-side filtering. */
 export const FEED_FILTER_KEYWORDS_BY_LANG: Record<
   FeedFilterLang,
@@ -142,4 +197,5 @@ export const FEED_FILTER_KEYWORDS_BY_LANG: Record<
   de: KEYWORDS_DE,
   en: KEYWORDS_EN,
   fr: KEYWORDS_FR,
+  it: KEYWORDS_IT,
 };
