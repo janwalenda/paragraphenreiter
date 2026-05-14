@@ -19,6 +19,12 @@ export const feeds = [
   "https://www.welt.de/feeds/latest.rss",
   "https://www.jungewelt.de/feeds/newsticker.rss",
   "https://www.telepolis.de/news-atom.xml",
+  "https://jacobin.de/rss.xml",
+  "https://www.rosalux.de/publication_rss.xml",
+  "https://www.rosalux.de/documentation_rss.xml",
+  "https://www.nd-aktuell.de/rss/neues-deutschland.xml",
+  "https://www.freitag.de/@@RSS",
+  "https://www.surplusmagazin.de/rss/",
 
   // —— French ——
   "https://www.lemonde.fr/rss/une.xml",
@@ -28,6 +34,7 @@ export const feeds = [
   "https://www.liberation.fr/arc/outboundfeeds/rss/category/international/",
   "https://www.lefigaro.fr/rss/figaro_international.xml",
   "https://www.mediapart.fr/articles/feed",
+  "https://www.humanite.fr/rss/actu.rss",
 
   // —— English-language / international ——
   "https://feeds.bbci.co.uk/news/world/rss.xml",
@@ -48,6 +55,11 @@ export const feeds = [
   "https://www.politico.eu/feed/",
   "https://www.economist.com/the-world-this-week/rss.xml",
   "https://www.euronews.com/rss?format=mrss&level=theme&name=news",
+  "https://jacobin.com/feed/",
+  "https://www.thenation.com/feed/",
+  "https://truthout.org/feed/",
+  "https://www.motherjones.com/feed/",
+  "https://www.commondreams.org/feeds/feed.rss",
 
   // —— Italian & Spanish ——
   "https://xml2.corriereobjects.it/rss/esteri.xml",

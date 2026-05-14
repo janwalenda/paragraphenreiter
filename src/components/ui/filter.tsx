@@ -53,12 +53,38 @@ type FilterRadioProps = Omit<React.ComponentProps<"input">, "type"> & {
    * without a separate form reset control.
    */
   reset?: boolean;
+  /**
+   * Visible chip text. When set, renders a `<label class="btn">` with an `sr-only` radio
+   * so the feed/source name is readable (not only `aria-label`).
+   */
+  chipLabel?: string;
 };
 
 /**
  * Radio styled as a `btn`; pass `reset` for the first “show all” chip in a filter group.
  */
-function FilterRadio({ className, reset, ...props }: FilterRadioProps) {
+function FilterRadio({ className, reset, chipLabel, ...props }: FilterRadioProps) {
+  if (chipLabel) {
+    return (
+      <label
+        data-slot="filter-radio-label"
+        className={cn(
+          "btn btn-sm shrink-0 cursor-pointer has-[:checked]:btn-primary",
+          reset && "filter-reset",
+          className,
+        )}
+      >
+        <input
+          type="radio"
+          data-slot="filter-radio"
+          className="sr-only"
+          {...props}
+        />
+        <span className="max-w-[min(100%,14rem)] truncate">{chipLabel}</span>
+      </label>
+    );
+  }
+
   return (
     <input
       type="radio"

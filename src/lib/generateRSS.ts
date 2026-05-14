@@ -11,15 +11,6 @@ function siteBaseUrl(): string {
   return "https://paragraphenreiter.de";
 }
 
-/** Returns the hostname of a URL, without leading `www.`, for display/author fields. */
-function hostnameOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
-
 /**
  * Converts a millisecond timestamp to a `Date` for RSS `pubDate`.
  * Falls back to “now” when the value is missing or invalid.
@@ -75,7 +66,7 @@ export async function generateRSS(): Promise<string> {
       guid: article.id,
       date: itemPubDate(article.publishedAt),
       categories: article.matchedKeywords,
-      author: hostnameOf(article.sourceFeedUrl),
+      author: article.sourceFeedTitle,
       ...(enc ? { enclosure: enc } : {}),
     });
   }
