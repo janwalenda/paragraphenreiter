@@ -34,6 +34,8 @@ export type FeedArticle = {
   imageUrl?: string;
   /** RSS feed URL this entry was parsed from. */
   sourceFeedUrl: string;
+  /** Channel `<title>` from the feed XML (fallback: feed URL host). */
+  sourceFeedTitle: string;
   /** Derived from feed metadata `language` for keyword curation. */
   sourceLang: FeedFilterLang;
   /** Configured keywords that matched in the item text (for the feed language). */
@@ -231,12 +233,14 @@ function resolveHeroImageUrl(
  *
  * @param item - Parsed rss-parser item.
  * @param sourceFeedUrl - Feed URL this item came from.
+ * @param sourceFeedTitle - Channel title (or host fallback) for UI.
  * @param sourceLang - Keyword bucket inferred from channel language.
  * @param matchedKeywords - Keywords that matched in the item text.
  */
 function toArticle(
   item: ParsedItem,
   sourceFeedUrl: string,
+  sourceFeedTitle: string,
   sourceLang: FeedFilterLang,
   matchedKeywords: string[],
 ): FeedArticle | null {
@@ -261,6 +265,7 @@ function toArticle(
     publishedAt: parseItemDate(item),
     imageUrl: resolveHeroImageUrl(item, link),
     sourceFeedUrl,
+    sourceFeedTitle,
     sourceLang,
     matchedKeywords,
   };
@@ -295,6 +300,20 @@ function looksLikeFeedXml(xml: string): boolean {
   );
 }
 
+/** Human-readable feed label for UI when the channel omits `<title>`. */
+function feedChannelDisplayTitle(
+  feedUrl: string,
+  channelTitle: string | undefined,
+): string {
+  const t = channelTitle?.trim();
+  if (t) return t;
+  try {
+    return new URL(feedUrl).hostname.replace(/^www\./, "");
+  } catch {
+    return feedUrl;
+  }
+}
+
 /**
  * Fetches all configured feeds on the server, keeps items that match configured keywords,
  * deduplicates by article link, and sorts newest first. Cached per request (React `cache`).
@@ -322,6 +341,7 @@ export const loadFilteredFeedArticles = cache(async (): Promise<FeedArticle[]> =
           url,
           lang: "en" as FeedFilterLang,
           items: [] as ParsedItem[],
+          channelTitle: undefined as string | undefined,
         };
       }
       const xml = (await res.text()).replace(/^\uFEFF/, "").trim();
@@ -334,13 +354,21 @@ export const loadFilteredFeedArticles = cache(async (): Promise<FeedArticle[]> =
           url,
           lang: "en" as FeedFilterLang,
           items: [] as ParsedItem[],
+          channelTitle: undefined as string | undefined,
         };
       }
       const parsed = (await parser.parseString(
         xml,
       )) as ParsedFeed;
       const lang = keywordLangFromRssLanguage(parsed.language);
-      return { url, lang, items: parsed.items as ParsedItem[] };
+      const channelTitle =
+        typeof parsed.title === "string" ? parsed.title : undefined;
+      return {
+        url,
+        lang,
+        items: parsed.items as ParsedItem[],
+        channelTitle,
+      };
     }),
   );
 
@@ -353,12 +381,19 @@ export const loadFilteredFeedArticles = cache(async (): Promise<FeedArticle[]> =
       console.warn("[loadFilteredFeedArticles]", result.reason);
       continue;
     }
-    const { url: feedUrl, lang, items } = result.value;
+    const { url: feedUrl, lang, items, channelTitle } = result.value;
+    const sourceFeedTitle = feedChannelDisplayTitle(feedUrl, channelTitle);
     for (const item of items) {
       const blob = getItemSearchBlob(item);
       if (!textMatchesAnyKeyword(blob, lang)) continue;
       const matchedKeywords = getMatchedKeywords(blob, lang);
-      const article = toArticle(item, feedUrl, lang, matchedKeywords);
+      const article = toArticle(
+        item,
+        feedUrl,
+        sourceFeedTitle,
+        lang,
+        matchedKeywords,
+      );
       if (!article) continue;
       if (seenLinks.has(article.link)) continue;
       seenLinks.add(article.link);

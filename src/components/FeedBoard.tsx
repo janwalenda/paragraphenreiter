@@ -13,14 +13,7 @@ import {
 import type { FeedArticle } from "@/lib/feedItems";
 import { htmlToPlainTextSnippet } from "@/lib/feedHtmlPlain";
 
-/** Host part of a URL for compact UI labels (drops leading `www.`). */
-function hostnameOf(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
+type SourceEntry = { url: string; title: string };
 
 const FEED_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: "numeric",
@@ -76,11 +69,16 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
   const [keyword, setKeyword] = useState<string>("all");
   const [langFilter, setLangFilter] = useState<"all" | FeedFilterLang>("all");
 
-  const sources = useMemo(() => {
-    const s = new Set(articles.map((a) => a.sourceFeedUrl));
-    return [...s].sort((a, b) =>
-      hostnameOf(a).localeCompare(hostnameOf(b), "en"),
-    );
+  const sourceEntries = useMemo((): SourceEntry[] => {
+    const m = new Map<string, string>();
+    for (const a of articles) {
+      if (!m.has(a.sourceFeedUrl)) m.set(a.sourceFeedUrl, a.sourceFeedTitle);
+    }
+    return [...m.entries()]
+      .map(([url, title]) => ({ url, title }))
+      .sort((a, b) =>
+        a.title.localeCompare(b.title, "en", { sensitivity: "base" }),
+      );
   }, [articles]);
 
   const keywords = useMemo(() => {
@@ -138,15 +136,18 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
             <FilterRadio
               name="feed-source"
               reset
+              chipLabel="All"
               checked={source === "all"}
               onChange={() => setSource("all")}
               value="X"
             />
-            {sources.map((url) => (
+            {sourceEntries.map(({ url, title }) => (
               <FilterRadio
                 key={url}
                 name="feed-source"
-                aria-label={`${hostnameOf(url)} (${sourceCounts.get(url) ?? 0})`}
+                chipLabel={title}
+                aria-label={`${title} (${sourceCounts.get(url) ?? 0})`}
+                title={`${title} — ${url}`}
                 checked={source === url}
                 onChange={() => setSource(url)}
               />
@@ -162,6 +163,7 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
             <FilterRadio
               name="feed-keyword"
               reset
+              chipLabel="All"
               checked={keyword === "all"}
               onChange={() => setKeyword("all")}
               value="X"
@@ -170,11 +172,12 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
               <FilterRadio
                 key={kw}
                 name="feed-keyword"
+                chipLabel={kw}
                 aria-label={`${kw} (${keywordCounts.get(kw) ?? 0})`}
                 title={kw}
                 checked={keyword === kw}
                 onChange={() => setKeyword(kw)}
-                className="max-w-[min(100%,14rem)] truncate"
+                className="max-w-[min(100%,14rem)]"
               />
             ))}
           </Filter>
@@ -195,6 +198,7 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
             <FilterRadio
               name="feed-lang"
               reset
+              chipLabel="All"
               checked={langFilter === "all"}
               onChange={() => setLangFilter("all")}
               value="X"
@@ -205,6 +209,7 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
                 <FilterRadio
                   key={lang}
                   name="feed-lang"
+                  chipLabel={m.label}
                   aria-label={`${m.label} (${langCounts.get(lang) ?? 0})`}
                   title={m.title}
                   checked={langFilter === lang}
@@ -293,8 +298,8 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
               <CardBody className="gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-base-content/50">
-                    <span className="font-medium uppercase tracking-wide">
-                      {hostnameOf(item.sourceFeedUrl)}
+                    <span className="font-medium tracking-wide text-base-content/80">
+                      {item.sourceFeedTitle}
                     </span>
                     <span className="text-base-content/30" aria-hidden>
                       ·
