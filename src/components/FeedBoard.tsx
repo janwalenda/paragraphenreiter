@@ -1,14 +1,17 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardTitle } from "@/components/ui/card";
 import { Filter, FilterRadio } from "@/components/ui/filter";
-import type { FeedFilterLang } from "@/constants/feedFilterKeywords";
+import {
+  FEED_FILTER_LANG_ORDER,
+  type FeedFilterLang,
+} from "@/constants/feedFilterKeywords";
 import type { FeedArticle } from "@/lib/feedItems";
+import { htmlToPlainTextSnippet } from "@/lib/feedHtmlPlain";
 
 /** Host part of a URL for compact UI labels (drops leading `www.`). */
 function hostnameOf(url: string): string {
@@ -23,6 +26,24 @@ const FEED_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   year: "numeric",
   month: "long",
   day: "numeric",
+};
+
+const FEED_LANG_FILTER_META: Record<
+  FeedFilterLang,
+  { label: string; title: string }
+> = {
+  de: {
+    label: "German",
+    title: "German keyword list (e.g. IGH, IStGH)",
+  },
+  en: {
+    label: "English",
+    title: "English keyword list (e.g. ICJ, ICC)",
+  },
+  fr: {
+    label: "French",
+    title: "French keyword list (e.g. CIJ, CPI)",
+  },
 };
 
 /**
@@ -162,7 +183,8 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
           <p className="text-xs text-base-content/60">
             From the channel RSS <code className="text-[0.7rem]">language</code>{" "}
             field: primary tag <code className="text-[0.7rem]">de</code> uses the
-            German keyword list; otherwise the English list (e.g. ICJ / ICC).
+            German list, <code className="text-[0.7rem]">fr</code> the French list;
+            otherwise the English list (e.g. ICJ / ICC).
           </p>
           <Filter>
             <FilterRadio
@@ -172,20 +194,19 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
               onChange={() => setLangFilter("all")}
               value="X"
             />
-            <FilterRadio
-              name="feed-lang"
-              aria-label={`German (${langCounts.get("de") ?? 0})`}
-              title="German keyword list (e.g. ICJ/ICC terms in German)"
-              checked={langFilter === "de"}
-              onChange={() => setLangFilter("de")}
-            />
-            <FilterRadio
-              name="feed-lang"
-              aria-label={`English (${langCounts.get("en") ?? 0})`}
-              title="English keyword list (e.g. ICJ, ICC)"
-              checked={langFilter === "en"}
-              onChange={() => setLangFilter("en")}
-            />
+            {FEED_FILTER_LANG_ORDER.map((lang) => {
+              const m = FEED_LANG_FILTER_META[lang];
+              return (
+                <FilterRadio
+                  key={lang}
+                  name="feed-lang"
+                  aria-label={`${m.label} (${langCounts.get(lang) ?? 0})`}
+                  title={m.title}
+                  checked={langFilter === lang}
+                  onChange={() => setLangFilter(lang)}
+                />
+              );
+            })}
           </Filter>
         </fieldset>
       </div>
@@ -223,14 +244,16 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
                   className="block text-inherit no-underline outline-offset-2 focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   <figure className="relative aspect-video overflow-hidden bg-base-300">
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element -- RSS src hosts are unbounded; next/image requires remotePatterns (max 50). */}
+                    <img
                       src={item.imageUrl}
                       alt={item.title}
-                      fill
-                      priority={index === 0}
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      loading={index === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      {...(index === 0 ? { fetchPriority: "high" as const } : {})}
                       className={
-                        "object-cover transition-transform duration-700 ease-out " +
+                        "absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out " +
                         "motion-safe:group-hover:scale-105 motion-reduce:transition-none"
                       }
                     />
@@ -316,16 +339,13 @@ export default function FeedBoard({ articles }: { articles: FeedArticle[] }) {
                     </Badge>
                   ) : null}
                 </div>
-                <div
-                  suppressHydrationWarning
+                <p
                   className={
-                    "line-clamp-4 text-sm text-base-content/75 max-w-none " +
-                    "[&_a]:text-primary [&_a]:underline [&_p]:mb-2 [&_p:last-child]:mb-0"
+                    "line-clamp-4 text-sm text-base-content/75 max-w-none break-words"
                   }
-                  dangerouslySetInnerHTML={{
-                    __html: item.description,
-                  }}
-                />
+                >
+                  {htmlToPlainTextSnippet(item.description)}
+                </p>
                 <div className="mt-1 flex justify-end border-t border-base-content/5 pt-2">
                   <Link
                     href={item.link}

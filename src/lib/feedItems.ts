@@ -8,17 +8,19 @@ import {
 
 /**
  * Maps the RSS channel `<language>` tag (BCP 47 / RFC 3066) to a keyword list language.
- * Only the primary subtag `de` uses the German keyword list; everything else uses English.
+ * Primary subtags `de` and `fr` use dedicated lists; everything else uses English.
  *
  * @param language - Raw `language` value from the feed, if present.
- * @returns `"de"` or `"en"` for keyword matching.
+ * @returns `"de"`, `"fr"`, or `"en"` for keyword matching.
  */
 function keywordLangFromRssLanguage(
   language: string | undefined,
 ): FeedFilterLang {
   if (!language || typeof language !== "string") return "en";
   const primary = language.trim().split(/[-_]/)[0]?.toLowerCase();
-  return primary === "de" ? "de" : "en";
+  if (primary === "de") return "de";
+  if (primary === "fr") return "fr";
+  return "en";
 }
 
 /** Single article after aggregation, filtering, and normalization. */
@@ -50,14 +52,16 @@ const parser = new RSSParser({
 
 /** BCP 47 locale string used for case folding when matching keywords. */
 function normalizeLocale(lang: FeedFilterLang): string {
-  return lang === "de" ? "de" : "en";
+  if (lang === "de") return "de";
+  if (lang === "fr") return "fr";
+  return "en";
 }
 
 /**
  * Lowercases text for keyword search using the appropriate locale.
  *
  * @param s - Haystack or keyword text.
- * @param lang - Feed language bucket (`de` / `en`).
+ * @param lang - Feed language bucket (`de` / `en` / `fr`).
  */
 function normalizeForMatch(s: string, lang: FeedFilterLang): string {
   return s.toLocaleLowerCase(normalizeLocale(lang));
@@ -129,6 +133,90 @@ function pickImageUrl(item: ParsedItem): string | undefined {
   return typeof url === "string" ? url : undefined;
 }
 
+const HTML_IMG_SCAN_MAX = 120_000;
+
+/**
+ * Reads a double- or single-quoted HTML attribute value from a tag fragment.
+ *
+ * @param tagOpen - Opening tag substring (e.g. `<img ...>` without closing `>`).
+ * @param attr - Lowercase attribute name.
+ */
+function extractQuotedHtmlAttr(tagOpen: string, attr: string): string | undefined {
+  const re = new RegExp(
+    `\\b${attr}\\s*=\\s*(["'])((?:\\\\.|(?!\\1).)*)\\1`,
+    "i",
+  );
+  const m = tagOpen.match(re);
+  return m?.[2]?.trim();
+}
+
+/**
+ * First candidate URL from a `srcset` value (descriptor after URL is ignored).
+ *
+ * @param srcset - Raw `srcset` attribute string.
+ */
+function firstUrlFromSrcset(srcset: string): string | undefined {
+  const part = srcset.split(",")[0]?.trim();
+  if (!part) return undefined;
+  const url = part.split(/\s+/)[0]?.trim();
+  return url || undefined;
+}
+
+/**
+ * Finds the first `<img>` in HTML and returns a usable absolute image URL.
+ * Used when the item has no `enclosure` / `media:thumbnail` but embeds a lead image in body HTML.
+ *
+ * @param html - Raw `content:encoded` or `content` HTML.
+ * @param baseUrl - Item link for resolving relative `src` / `srcset` URLs.
+ */
+function firstImageUrlFromHtml(html: string, baseUrl: string): string | undefined {
+  if (!html) return undefined;
+  const slice = html.slice(0, HTML_IMG_SCAN_MAX);
+  const lower = slice.toLowerCase();
+  let pos = 0;
+  while (pos < slice.length) {
+    const i = lower.indexOf("<img", pos);
+    if (i === -1) break;
+    const gt = slice.indexOf(">", i);
+    if (gt === -1) break;
+    const tag = slice.slice(i, gt);
+    let raw =
+      extractQuotedHtmlAttr(tag, "src") ??
+      firstUrlFromSrcset(extractQuotedHtmlAttr(tag, "srcset") ?? "");
+    if (raw && !/^https?:\/\//i.test(raw) && !/^data:/i.test(raw)) {
+      try {
+        raw = new URL(raw, baseUrl).href;
+      } catch {
+        raw = "";
+      }
+    }
+    if (raw && !/^data:/i.test(raw) && /^https?:\/\//i.test(raw)) {
+      return raw;
+    }
+    pos = i + 4;
+  }
+  return undefined;
+}
+
+/**
+ * Resolves hero image: RSS fields first, then first `<img>` in item HTML.
+ *
+ * @param item - Parsed item.
+ * @param baseLink - Article URL for resolving relative image paths.
+ */
+function resolveHeroImageUrl(
+  item: ParsedItem,
+  baseLink: string,
+): string | undefined {
+  const fromMeta = pickImageUrl(item);
+  if (fromMeta) return fromMeta;
+  const rawHtml =
+    (typeof item["content:encoded"] === "string" && item["content:encoded"]) ||
+    (typeof item.content === "string" && item.content) ||
+    "";
+  return firstImageUrlFromHtml(rawHtml, baseLink);
+}
+
 /**
  * Converts a parsed RSS item into a `FeedArticle`, or `null` if required fields are missing.
  *
@@ -162,7 +250,7 @@ function toArticle(
     link,
     description,
     publishedAt: parseItemDate(item),
-    imageUrl: pickImageUrl(item),
+    imageUrl: resolveHeroImageUrl(item, link),
     sourceFeedUrl,
     sourceLang,
     matchedKeywords,
@@ -215,7 +303,18 @@ export const loadFilteredFeedArticles = cache(async (): Promise<FeedArticle[]> =
         },
         next: { revalidate: 120 },
       });
-      if (!res.ok) throw new Error(`${res.status} ${url}`);
+      if (!res.ok) {
+        console.warn(
+          "[loadFilteredFeedArticles] Skipping feed (HTTP error):",
+          res.status,
+          url,
+        );
+        return {
+          url,
+          lang: "en" as FeedFilterLang,
+          items: [] as ParsedItem[],
+        };
+      }
       const xml = (await res.text()).replace(/^\uFEFF/, "").trim();
       if (!xml || !looksLikeFeedXml(xml)) {
         console.warn(
